@@ -58,7 +58,7 @@ v.Feature = "tags"
 anlyze, _ := v.Anlyze("input.png")
 fmt.Printf("%v\n", anlyze)
 ```
-所有的功能(Feature)你可以在这里找到:
+所有的功能(Feature)你可以在这里找到,就一个tag的区别:
 [官网](https://portal.vision.cognitive.azure.com/gallery/imageanalysis)
 
 ### 题外话
@@ -69,3 +69,4 @@ azure Vision的价格如下:
 20 transactions per minute  
 超出: 0-1M transactions - $1 per 1,000 transactions  
 但是要先绑卡(坑啊之前在amazon没注意超了扣了好多钱)
+azure 并没有做任何加密处理之类的,点名批评国内的云服务商,很多都是没有demo的
