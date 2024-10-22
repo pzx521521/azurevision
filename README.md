@@ -27,8 +27,8 @@ import (
 )
 
 func main(){
-	v := NewAzureVision()
-	anlyze, _ := v.Anlyze("input.png")
+	av := azurevision.NewAzureVision()
+	anlyze, _ := av.Anlyze("input.png")
 	fmt.Printf("%v\n", anlyze)
 	// Output:map[captionResult:map[confidence:0.8023778796195984 text:a cartoon of a woman with blue hair] metadata:map[height:751 width:1202] modelVersion:2023-10-01]
 }
@@ -36,21 +36,21 @@ func main(){
 Compressing the image
 To handle network issues, the image is compressed by default, with a default quality of 10. If you want to check the compression result, you can use the following code:
 ```go
-v := NewAzureVision()
-v.Quality = 20
-v.TestCompress("input.png", "output.jpg")
+av := azurevision.NewAzureVision()
+av.Quality = 20
+av.TestCompress("input.png", "output.jpg")
 ```
 If you don't want to use compression, you can set the quality to 0 (or less than or equal to 0):
 ```go
-v := NewAzureVision()
-v.Quality = 0
+av := azurevision.NewAzureVision()
+av.Quality = 0
 ```
 Using other features
 If you want to use other features (e.g., generating tags), the default feature is to get a caption. You can switch features using the following code:
 ```golang
-v := NewAzureVision()
-v.Feature = "tags"
-anlyze, _ := v.Anlyze("input.png")
+av := azurevision.NewAzureVision()
+av.Feature = "tags"
+anlyze, _ := av.Anlyze("input.png")
 fmt.Printf("%v\n", anlyze)
 ```
 All features can be found here:

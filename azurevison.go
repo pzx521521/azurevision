@@ -31,6 +31,7 @@ func (v *AzureVision) TestCompress(inputPath, outputPath string) {
 	if err != nil {
 		fmt.Printf("%v\n", err)
 	}
+	fmt.Printf("Compressed image size: %.2f KB\n", float64(buffer.Len())/1024)
 	os.WriteFile(outputPath, buffer.Bytes(), os.ModePerm)
 }
 
@@ -38,7 +39,7 @@ func (v *AzureVision) Anlyze(inputPath string) (ret map[string]interface{}, err 
 	var imageData *bytes.Buffer
 	// Compress image
 	if v.Quality > 0 && v.Quality <= 100 {
-		imageData, err = compressImage("input.png", 10)
+		imageData, err = compressImage(inputPath, 10)
 		if err != nil {
 			return ret, err
 		}
@@ -82,7 +83,6 @@ func compressImage(inputPath string, quality int) (*bytes.Buffer, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("Compressed image size: %.2f KB\n", float64(imgBytes.Len())/1024)
 	return imgBytes, nil
 }
 
