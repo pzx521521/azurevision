@@ -34,16 +34,18 @@ func main(){
 }
 ```
 Compressing the image
-To handle network issues, the image is compressed by default, with a default quality of 10. If you want to check the compression result, you can use the following code:
+To handle network issues, the image is compressed by default, with a default quality of 50, width with 500. If you want to check the compression result, you can use the following code:
 ```go
 av := azurevision.NewAzureVision()
 av.Quality = 20
+av.Width = 600
 av.TestCompress("input.png", "output.jpg")
 ```
-If you don't want to use compression, you can set the quality to 0 (or less than or equal to 0):
+If you don't want to use compression, you can set the quality to 100, width to 0  (or less than 0):
 ```go
 av := azurevision.NewAzureVision()
-av.Quality = 0
+av.Quality = 100
+av.Width = 0
 ```
 Using other features
 If you want to use other features (e.g., generating tags), the default feature is to get a caption. You can switch features using the following code:

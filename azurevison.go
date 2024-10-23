@@ -20,16 +20,18 @@ var FEATURES = []string{"caption", "tags", "denseCaptions"}
 type AzureVision struct {
 	Feature string
 	Quality int
+	Width   int
 }
 
 func NewAzureVision() *AzureVision {
-	return &AzureVision{Feature: FEATURES[0], Quality: 10}
+	return &AzureVision{Feature: FEATURES[0], Quality: 50, Width: 500}
 }
 
 func (v *AzureVision) TestCompress(inputPath, outputPath string) {
-	buffer, err := compressImage(inputPath, v.Quality)
+	buffer, err := compressImage(inputPath, v.Quality, v.Width)
 	if err != nil {
 		fmt.Printf("%v\n", err)
+		return
 	}
 	fmt.Printf("Compressed image size: %.2f KB\n", float64(buffer.Len())/1024)
 	os.WriteFile(outputPath, buffer.Bytes(), os.ModePerm)
@@ -39,7 +41,7 @@ func (v *AzureVision) Anlyze(inputPath string) (ret map[string]interface{}, err 
 	var imageData *bytes.Buffer
 	// Compress image
 	if v.Quality > 0 && v.Quality <= 100 {
-		imageData, err = compressImage(inputPath, 10)
+		imageData, err = compressImage(inputPath, v.Quality, v.Width)
 		if err != nil {
 			return ret, err
 		}
@@ -64,7 +66,7 @@ func (v *AzureVision) Anlyze(inputPath string) (ret map[string]interface{}, err 
 	return ret, nil
 }
 
-func compressImage(inputPath string, quality int) (*bytes.Buffer, error) {
+func compressImage(inputPath string, quality int, width int) (*bytes.Buffer, error) {
 	// Open the image
 	file, err := os.Open(inputPath)
 	if err != nil {
@@ -76,6 +78,9 @@ func compressImage(inputPath string, quality int) (*bytes.Buffer, error) {
 	img, _, err := image.Decode(file)
 	if err != nil {
 		return nil, err
+	}
+	if width > 0 && width < img.Bounds().Dx() {
+		img = resizeWithAspectRatio(img, width, 0)
 	}
 	// Save the image to bytes.Buffer with compression
 	imgBytes := new(bytes.Buffer)
@@ -119,4 +124,36 @@ func analyze(imageData *bytes.Buffer, features string) (ret map[string]interface
 		return ret, err
 	}
 	return ret, nil
+}
+
+// resizeWithAspectRatio 根据宽高比等比例缩放图像
+func resizeWithAspectRatio(img image.Image, newWidth, newHeight int) *image.RGBA {
+	// 获取原始图像的宽度和高度
+	srcBounds := img.Bounds()
+	srcWidth := srcBounds.Dx()
+	srcHeight := srcBounds.Dy()
+
+	// 如果宽度或高度为 0，则按比例计算相应的值
+	if newWidth == 0 {
+		newWidth = (newHeight * srcWidth) / srcHeight
+	}
+	if newHeight == 0 {
+		newHeight = (newWidth * srcHeight) / srcWidth
+	}
+
+	// 创建新的目标图像
+	dst := image.NewRGBA(image.Rect(0, 0, newWidth, newHeight))
+
+	// 缩放图像，使用最近邻插值法
+	for y := 0; y < newHeight; y++ {
+		for x := 0; x < newWidth; x++ {
+			// 计算原图中对应的像素
+			srcX := x * srcWidth / newWidth
+			srcY := y * srcHeight / newHeight
+			// 取原图中的像素并设置到目标图像中
+			dst.Set(x, y, img.At(srcX, srcY))
+		}
+	}
+
+	return dst
 }
