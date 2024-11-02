@@ -11,20 +11,30 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"strings"
 )
 
+// https://portal.vision.cognitive.azure.com/api/demo/analyze?features=tags&language=zh
 const analyzeURL = "https://portal.vision.cognitive.azure.com/api/demo/analyze"
 
 var FEATURES = []string{"caption", "tags", "denseCaptions"}
 
 type AzureVision struct {
-	Feature string
-	Quality int
-	Width   int
+	Feature  string
+	Quality  int
+	Width    int
+	Language string
+	Clinet   *http.Client
 }
 
 func NewAzureVision() *AzureVision {
-	return &AzureVision{Feature: FEATURES[0], Quality: 50, Width: 500}
+	return &AzureVision{
+		Feature:  FEATURES[0],
+		Quality:  50,
+		Width:    500,
+		Language: "en",
+		Clinet:   http.DefaultClient,
+	}
 }
 
 func (v *AzureVision) TestCompress(inputPath, outputPath string) {
@@ -39,27 +49,32 @@ func (v *AzureVision) TestCompress(inputPath, outputPath string) {
 
 func (v *AzureVision) Anlyze(inputPath string) (ret map[string]interface{}, err error) {
 	var imageData *bytes.Buffer
-	// Compress image
-	if v.Quality > 0 && v.Quality <= 100 {
-		imageData, err = compressImage(inputPath, v.Quality, v.Width)
-		if err != nil {
-			return ret, err
-		}
+	if strings.HasPrefix(inputPath, "http") {
+		imageData = getHttpImage(v.Clinet, inputPath)
 	} else {
-		file, err := os.Open(inputPath)
-		if err != nil {
-			return ret, err
+		// Compress image
+		if v.Quality > 0 && v.Quality <= 100 {
+			imageData, err = compressImage(inputPath, v.Quality, v.Width)
+			if err != nil {
+				return ret, err
+			}
+		} else {
+			file, err := os.Open(inputPath)
+			if err != nil {
+				return ret, err
+			}
+			defer file.Close()
+			buffer := new(bytes.Buffer)
+			_, err = io.Copy(buffer, file)
+			if err != nil {
+				return ret, err
+			}
+			imageData = buffer
 		}
-		defer file.Close()
-		buffer := new(bytes.Buffer)
-		_, err = io.Copy(buffer, file)
-		if err != nil {
-			return ret, err
-		}
-		imageData = buffer
+
 	}
 	// Upload compressed image and get info
-	ret, err = analyze(imageData, v.Feature)
+	ret, err = analyze(v.Clinet, imageData, v.Feature, v.Language)
 	if err != nil {
 		fmt.Println("Error analyzing image:", err)
 	}
@@ -91,8 +106,20 @@ func compressImage(inputPath string, quality int, width int) (*bytes.Buffer, err
 	return imgBytes, nil
 }
 
-func analyze(imageData *bytes.Buffer, features string) (ret map[string]interface{}, err error) {
-	url := fmt.Sprintf("%s?features=%s&language=en", analyzeURL, features)
+func getHttpImage(client *http.Client, imgUrl string) *bytes.Buffer {
+	get, err := client.Get(imgUrl)
+	if err != nil {
+		return nil
+	}
+	defer get.Body.Close()
+	data, err := io.ReadAll(get.Body)
+	if err != nil {
+		return nil
+	}
+	return bytes.NewBuffer(data)
+}
+func analyze(client *http.Client, imageData *bytes.Buffer, features string, language string) (ret map[string]interface{}, err error) {
+	url := fmt.Sprintf("%s?features=%s&language=%s", analyzeURL, features, language)
 	var b bytes.Buffer
 	writer := multipart.NewWriter(&b)
 	// 将图像数据作为普通的字段直接添加到 multipart 数据中
@@ -110,7 +137,6 @@ func analyze(imageData *bytes.Buffer, features string) (ret map[string]interface
 		return ret, err
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		return ret, err
